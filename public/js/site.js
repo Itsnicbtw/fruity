@@ -86,7 +86,7 @@ function emptyProducts(){
 
 function productCard(p){
   const image=safe(p.image);
-  return `<a class="product-card" href="/product/${encodeURIComponent(p.slug)}" data-link>
+  return `<a class="product-card" href="/merch/${encodeURIComponent(p.category)}/${encodeURIComponent(p.slug)}" data-link>
     <div class="product-image">${image?`<img src="${esc(image)}" alt="${esc(p.name)}">`:`<div class="product-placeholder">frt.</div>`}</div>
     <div class="product-body"><span class="product-badge">${esc(p.badge||"FRUITFUL ESSENTIALS")}</span><div class="product-name">${esc(p.name)}</div>
       <div class="product-footer"><div><div class="product-price">${money(p)}</div>${(p.colors||[]).length?`<div class="swatches">${p.colors.slice(0,7).map(c=>`<span class="swatch" style="background:${esc(c)}"></span>`).join("")}</div>`:""}</div><span class="mini-cart">${icons.cart}</span></div>
@@ -101,15 +101,9 @@ function categoryCarousel(){
   </section>`;
 }
 
-function featured(){
-  return `<section class="featured">
-    ${sectionHead("FEATURED COLLECTIONS","FRUITY PICKS",`<a class="view-all" href="/merch" data-link>VIEW ALL MERCH <span>→</span></a>`)}
-    ${state.products.length?`<div class="product-grid">${state.products.slice(0,5).map(productCard).join("")}</div>`:emptyProducts()}
-  </section>`;
-}
-
 function renderDirectory(){
-  return `${header("all")}${hero(true)}<main class="directory-main">${categoryCarousel()}${featured()}</main>${footer()}`;
+  // /merch is deliberately only the merch directory. Product listings live under /merch/{type}.
+  return `${header("all")}${hero(true)}<main class="directory-main">${categoryCarousel()}</main>${footer()}`;
 }
 
 function renderHome(){
@@ -119,7 +113,6 @@ function renderHome(){
       <article class="home-panel"><div class="kicker">${esc(a.eyebrow||"ABOUT FRUITY")}</div><h1>${esc(a.title||"FRUITFUL, NOT FORMAL.")}</h1><p>${esc(a.intro||"")}</p><a class="view-all" href="/about" data-link>ABOUT FRUITY →</a></article>
       <article class="home-panel yellow"><div class="kicker">FRUITFUL POWER.</div><h1>DROP ALL. frt.</h1><p>${esc(a.secondary||"")}</p><a class="view-all" href="/merch" data-link>SHOP MERCH →</a></article>
     </section>
-    ${categoryCarousel()}${featured()}
   </main>${footer()}`;
 }
 
@@ -183,7 +176,18 @@ function route(){
   else if(p==="/about")html=renderAbout();
   else if(p==="/account")html=renderAccount();
   else if(p==="/merch")html=renderDirectory();
-  else if(p.startsWith("/merch/"))html=renderCategory(decodeURIComponent(p.split("/")[2]||""));
+  else if(p.startsWith("/merch/")){
+    const parts=p.split("/").filter(Boolean);
+    const category=decodeURIComponent(parts[1]||"");
+    if(parts.length>=3){
+      const slug=decodeURIComponent(parts.slice(2).join("/"));
+      const prod=state.products.find(x=>x.category===category&&x.slug===slug);
+      html=prod?renderProduct(prod):notFound();
+    }else{
+      html=renderCategory(category);
+    }
+  }
+  // Legacy product URLs still render, but generated URLs now live under /merch/{type}/{slug}.
   else if(p.startsWith("/product/")){const slug=decodeURIComponent(p.split("/")[2]||"");const prod=state.products.find(x=>x.slug===slug);html=prod?renderProduct(prod):notFound()}
   else html=notFound();
   app.innerHTML=html;bind();
